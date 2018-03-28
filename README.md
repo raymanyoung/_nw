@@ -7,7 +7,7 @@ This is the introduction
 ## Architecture
 Architecture here
 
-** Note **
+**Note**
 1. Hello
 2. World
 3. 你好
