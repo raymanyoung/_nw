@@ -98,9 +98,9 @@ contract CopyrightedAssetLibraryToken is ERC223, SafeMath {
       symbol = "ABK";
       name = "AI BANK TOKEN";
       decimals = 18;
-      _totalSupply = 7500000000 * 10**uint(decimals);
-      balances[msg.sender] = _totalSupply;
-      Transfer(address(0), msg.sender, _totalSupply);
+      totalSupply = 7500000000 * 10**uint(decimals);
+      balances[msg.sender] = totalSupply;
+      Transfer(address(0), msg.sender, totalSupply, "");
   }
   
   
@@ -129,26 +129,25 @@ contract CopyrightedAssetLibraryToken is ERC223, SafeMath {
         if (balanceOf(msg.sender) < _value) revert();
         balances[msg.sender] = safeSub(balanceOf(msg.sender), _value);
         balances[_to] = safeAdd(balanceOf(_to), _value);
-        assert(_to.call.value(0)(bytes4(keccak256(_custom_fallback)), msg.sender, _value, _data));
+        require(_to.call.value(0)(bytes4(keccak256(_custom_fallback)), msg.sender, _value, _data));
         Transfer(msg.sender, _to, _value, _data);
         return true;
     }
     else {
         return transferToAddress(_to, _value, _data);
     }
-}
+  }
   
 
   // Function that is called when a user or another contract wants to transfer funds .
   function transfer(address _to, uint _value, bytes _data) public returns (bool success) {
-      
     if(isContract(_to)) {
         return transferToContract(_to, _value, _data);
     }
     else {
         return transferToAddress(_to, _value, _data);
     }
-}
+  }
   
   // Standard function transfer similar to ERC20 transfer with no _data .
   // Added due to backwards compatibility reasons .
@@ -163,7 +162,7 @@ contract CopyrightedAssetLibraryToken is ERC223, SafeMath {
     else {
         return transferToAddress(_to, _value, empty);
     }
-}
+  }
 
   //assemble the given address bytecode. If bytecode exists then the _addr is a contract.
   function isContract(address _addr) private view returns (bool is_contract) {
@@ -173,7 +172,7 @@ contract CopyrightedAssetLibraryToken is ERC223, SafeMath {
             length := extcodesize(_addr)
       }
       return (length>0);
-    }
+  }
 
   //function that is called when transaction target is an address
   function transferToAddress(address _to, uint _value, bytes _data) private returns (bool success) {
@@ -193,8 +192,7 @@ contract CopyrightedAssetLibraryToken is ERC223, SafeMath {
     receiver.tokenFallback(msg.sender, _value, _data);
     Transfer(msg.sender, _to, _value, _data);
     return true;
-}
-
+  }
 
   function balanceOf(address _owner) public view returns (uint balance) {
     return balances[_owner];
