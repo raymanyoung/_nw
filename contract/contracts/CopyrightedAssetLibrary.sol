@@ -1,4 +1,7 @@
-pragma solidity ^0.4.18;
+pragma solidity ^0.4.21;
+import "./ERC721Receiver.sol";
+import "./SafeMath.sol";
+import "./AddressUtils.sol";
 
 
 /**
@@ -7,66 +10,77 @@ pragma solidity ^0.4.18;
  * functions, this simplifies the implementation of "user permissions".
  */
 contract Ownable {
-  address public owner;
+    address public owner;
 
 
-  /**
-   * @dev The Ownable constructor sets the original `owner` of the contract to the sender
-   * account.
-   */
-  function Ownable() {
-    owner = msg.sender;
-  }
-
-
-  /**
-   * @dev Throws if called by any account other than the owner.
-   */
-  modifier onlyOwner() {
-    require(msg.sender == owner);
-    _;
-  }
-
-
-  /**
-   * @dev Allows the current owner to transfer control of the contract to a newOwner.
-   * @param newOwner The address to transfer ownership to.
-   */
-  function transferOwnership(address newOwner) onlyOwner {
-    if (newOwner != address(0)) {
-      owner = newOwner;
+    /**
+     * @dev The Ownable constructor sets the original `owner` of the contract to the sender
+     * account.
+     */
+    function Ownable() {
+        owner = msg.sender;
     }
-  }
 
+
+    /**
+     * @dev Throws if called by any account other than the owner.
+     */
+    modifier onlyOwner() {
+        require(msg.sender == owner);
+        _;
+    }
+
+
+    /**
+     * @dev Allows the current owner to transfer control of the contract to a newOwner.
+     * @param newOwner The address to transfer ownership to.
+     */
+    function transferOwnership(address newOwner) onlyOwner {
+        if (newOwner != address(0)) {
+            owner = newOwner;
+        }
+    }
 }
 
-contract ERC223 {
-  function balanceOf(address who) public view returns (uint);
-  
-  function name() public view returns (string _name);
-  function symbol() public view returns (string _symbol);
-  function decimals() public view returns (uint8 _decimals);
-  function totalSupply() public view returns (uint256 _supply);
+contract ERC721BasicInterface {
+    event Transfer(address indexed _from, address indexed _to, uint256 _tokenId);
+    event Approval(address indexed _owner, address indexed _approved, uint256 _tokenId);
+    event ApprovalForAll(address indexed _owner, address indexed _operator, bool _approved);
 
-  function transfer(address to, uint value) public returns (bool ok);
-  function transfer(address to, uint value, bytes data) public returns (bool ok);
-  function transfer(address to, uint value, bytes data, string custom_fallback) public returns (bool ok);
-  
-  event Transfer(address indexed from, address indexed to, uint value, bytes data);
-}
+    function balanceOf(address _owner) public view returns (uint256 _balance);
+    function ownerOf(uint256 _tokenId) public view returns (address _owner);
+    function exists(uint256 _tokenId) public view returns (bool _exists);
 
- contract ContractReceiver {
-    function tokenFallback(address _from, uint _value, bytes _data) ;
+    function approve(address _to, uint256 _tokenId) public;
+    function getApproved(uint256 _tokenId) public view returns (address _operator);
+
+    function setApprovalForAll(address _operator, bool _approved) public;
+    function isApprovedForAll(address _owner, address _operator) public view returns (bool);
+
+    function transferFrom(address _from, address _to, uint256 _tokenId) public;
+    function safeTransferFrom(address _from, address _to, uint256 _tokenId) public;
+    function safeTransferFrom(
+        address _from,
+        address _to,
+        uint256 _tokenId,
+        bytes _data
+    ) public;
+    
+//     function name() public view returns (string _name);
+//     function symbol() public view returns (string _symbol);
+//     function tokenURI(uint256 _tokenId) public view returns (string);
+
+//     function totalSupply() public view returns (uint256);
+//     function tokenOfOwnerByIndex(address _owner, uint256 _index) public view returns (uint256 _tokenId);
+//     function tokenByIndex(uint256 _index) public view returns (uint256);
  }
 
+contract ContractReceiver {
+    function tokenFallback(address _from, uint _value, bytes _data) ;
+}
 
- contract CopyrightedAssetLibInterface is ERC223 {
+contract CopyrightedAssetLibInterface {
 
-    // function issueLicenseTo(address _to, uint256 _tokenId) external;
-    // function isHavingLicense(address _add, uint256 _tokenId) external view returns (bool);
-
-    // Events
-    event TransferOwnership(address from, address to, uint256 tokenId);
     /// Emited when the license of an asset is issued to a buyer
     event IssueLicense (address from, address to, uint256 tokenId);
 
@@ -88,10 +102,10 @@ contract WithExternalERC223 is Ownable {
     }
 
     modifier supportedToken(address tokenAddress) { 
-      require (_supportedToken != address(0) && tokenAddress == _supportedToken); 
-      _; 
+        require (_supportedToken != address(0) && tokenAddress == _supportedToken); 
+        _; 
     }
-    
+        
 }
 
 /// @title A facet of KittyCore that manages special access privileges.
@@ -136,103 +150,351 @@ contract Pausable is Ownable{
     }
 }
 
-contract CopyrightedAssetLibrary is CopyrightedAssetLibInterface, WithExternalERC223, ContractReceiver, Pausable {
-    mapping (uint => address) tokenOwners;
-    mapping (address => uint256) ownershipTokenCount;
-    mapping (bytes => address) hashOnwer;
-    mapping (uint => uint32) tokenPrice;
+contract ERC721BasicToken is ERC721BasicInterface {
     
-    struct Asset {
-      uint256    createTime;
-      bytes  ipfsHash; // base58 encoded file hash
+    using SafeMath for uint256;
+    using AddressUtils for address;
+
+    function addTokenTo(address _to, uint256 _tokenId) internal;
+    function removeTokenFrom(address _from, uint256 _tokenId) internal ;
+    function afterTransfer(uint256 _tokenId) internal;
+
+    bytes4 constant ERC721_RECEIVED = 0xf0b9e5ba;
+    // Mapping from token ID to owner
+    mapping (uint256 => address) internal tokenOwner;
+
+    // Mapping from token ID to approved address
+    mapping (uint256 => address) internal tokenApprovals;
+
+    // Mapping from owner to number of owned token
+    mapping (address => uint256) internal ownedTokensCount;
+
+    // Mapping from owner to operator approvals
+    mapping (address => mapping (address => bool)) internal operatorApprovals;
+
+    /**
+     * @dev Guarantees msg.sender is owner of the given token
+     * @param _tokenId uint256 ID of the token to validate its ownership belongs to msg.sender
+     */
+    modifier onlyOwnerOf(uint256 _tokenId) {
+        require(ownerOf(_tokenId) == msg.sender);
+        _;
     }
 
-    function _transfer(address _from, address _to, uint256 _tokenId) internal {
-        // Since the number of kittens is capped to 2^32 we can't overflow this
-        ownershipTokenCount[_to]++;
-        // transfer ownership
-        tokenOwners[_tokenId] = _to;
-        // When creating new kittens _from is 0x0, but we can't account that address.
-        if (_from != address(0)) {
-            ownershipTokenCount[_from]--;
-        }
-        // Emit the transfer event.
-        Transfer(_from, _to, _tokenId, "");
+    /**
+     * @dev Checks msg.sender can transfer a token, by being owner, approved, or operator
+     * @param _tokenId uint256 ID of the token to validate
+     */
+    modifier canTransfer(uint256 _tokenId) {
+        require(isApprovedOrOwner(msg.sender, _tokenId));
+        _;
     }
+
+    /**
+     * @dev Gets the balance of the specified address
+     * @param _owner address to query the balance of
+     * @return uint256 representing the amount owned by the passed address
+     */
+    function balanceOf(address _owner) public view returns (uint256) {
+        require(_owner != address(0));
+        return ownedTokensCount[_owner];
+    }
+
+    /**
+     * @dev Gets the owner of the specified token ID
+     * @param _tokenId uint256 ID of the token to query the owner of
+     * @return owner address currently marked as the owner of the given token ID
+     */
+    function ownerOf(uint256 _tokenId) public view returns (address) {
+        address owner = tokenOwner[_tokenId];
+        require(owner != address(0));
+        return owner;
+    }
+
+    /**
+     * @dev Returns whether the specified token exists
+     * @param _tokenId uint256 ID of the token to query the existance of
+     * @return whether the token exists
+     */
+    function exists(uint256 _tokenId) public view returns (bool) {
+        address owner = tokenOwner[_tokenId];
+        return owner != address(0);
+    }
+
+    /**
+     * @dev Approves another address to transfer the given token ID
+     * @dev The zero address indicates there is no approved address.
+     * @dev There can only be one approved address per token at a given time.
+     * @dev Can only be called by the token owner or an approved operator.
+     * @param _to address to be approved for the given token ID
+     * @param _tokenId uint256 ID of the token to be approved
+     */
+    function approve(address _to, uint256 _tokenId) public {
+        address owner = ownerOf(_tokenId);
+        require(_to != owner);
+        require(msg.sender == owner || isApprovedForAll(owner, msg.sender));
+
+        if (getApproved(_tokenId) != address(0) || _to != address(0)) {
+            tokenApprovals[_tokenId] = _to;
+            emit Approval(owner, _to, _tokenId);
+        }
+    }
+
+    /**
+     * @dev Gets the approved address for a token ID, or zero if no address set
+     * @param _tokenId uint256 ID of the token to query the approval of
+     * @return address currently approved for a the given token ID
+     */
+    function getApproved(uint256 _tokenId) public view returns (address) {
+        return tokenApprovals[_tokenId];
+    }
+
+    /**
+     * @dev Sets or unsets the approval of a given operator
+     * @dev An operator is allowed to transfer all tokens of the sender on their behalf
+     * @param _to operator address to set the approval
+     * @param _approved representing the status of the approval to be set
+     */
+    function setApprovalForAll(address _to, bool _approved) public {
+        require(_to != msg.sender);
+        operatorApprovals[msg.sender][_to] = _approved;
+        emit ApprovalForAll(msg.sender, _to, _approved);
+    }
+
+    /**
+     * @dev Tells whether an operator is approved by a given owner
+     * @param _owner owner address which you want to query the approval of
+     * @param _operator operator address which you want to query the approval of
+     * @return bool whether the given operator is approved by the given owner
+     */
+    function isApprovedForAll(address _owner, address _operator) public view returns (bool) {
+        return operatorApprovals[_owner][_operator];
+    }
+
+    /**
+     * @dev Transfers the ownership of a given token ID to another address
+     * @dev Usage of this method is discouraged, use `safeTransferFrom` whenever possible
+     * @dev Requires the msg sender to be the owner, approved, or operator
+     * @param _from current owner of the token
+     * @param _to address to receive the ownership of the given token ID
+     * @param _tokenId uint256 ID of the token to be transferred
+    */
+    function transferFrom(address _from, address _to, uint256 _tokenId) public canTransfer(_tokenId) {
+        unsafeTransferFrom(_from, _to, _tokenId);
+    }
+
+    function unsafeTransferFrom(address _from, address _to, uint256 _tokenId) internal {
+        require(_from != address(0));
+        require(_to != address(0));       
+
+        clearApproval(_from, _tokenId);
+        removeTokenFrom(_from, _tokenId);
+        addTokenTo(_to, _tokenId);
+
+        emit Transfer(_from, _to, _tokenId);       
+    }
+
+    /**
+     * @dev Safely transfers the ownership of a given token ID to another address
+     * @dev If the target address is a contract, it must implement `onERC721Received`,
+     *  which is called upon a safe transfer, and return the magic value
+     *  `bytes4(keccak256("onERC721Received(address,uint256,bytes)"))`; otherwise,
+     *  the transfer is reverted.
+     * @dev Requires the msg sender to be the owner, approved, or operator
+     * @param _from current owner of the token
+     * @param _to address to receive the ownership of the given token ID
+     * @param _tokenId uint256 ID of the token to be transferred
+    */
+    function safeTransferFrom(
+        address _from,
+        address _to,
+        uint256 _tokenId
+    )
+        public
+        canTransfer(_tokenId)
+    {
+        // solium-disable-next-line arg-overflow
+        safeTransferFrom(_from, _to, _tokenId, "");
+    }
+
+    /**
+     * @dev Safely transfers the ownership of a given token ID to another address
+     * @dev If the target address is a contract, it must implement `onERC721Received`,
+     *  which is called upon a safe transfer, and return the magic value
+     *  `bytes4(keccak256("onERC721Received(address,uint256,bytes)"))`; otherwise,
+     *  the transfer is reverted.
+     * @dev Requires the msg sender to be the owner, approved, or operator
+     * @param _from current owner of the token
+     * @param _to address to receive the ownership of the given token ID
+     * @param _tokenId uint256 ID of the token to be transferred
+     * @param _data bytes data to send along with a safe transfer check
+     */
+    function safeTransferFrom(
+        address _from,
+        address _to,
+        uint256 _tokenId,
+        bytes _data
+    )
+        public
+        canTransfer(_tokenId)
+    {
+        transferFrom(_from, _to, _tokenId);
+        // solium-disable-next-line arg-overflow
+        require(checkAndCallSafeTransfer(_from, _to, _tokenId, _data));
+    }
+
+    /**
+     * @dev Returns whether the given spender can transfer a given token ID
+     * @param _spender address of the spender to query
+     * @param _tokenId uint256 ID of the token to be transferred
+     * @return bool whether the msg.sender is approved for the given token ID,
+     *  is an operator of the owner, or is the owner of the token
+     */
+    function isApprovedOrOwner(address _spender, uint256 _tokenId) internal view returns (bool) {
+        address owner = ownerOf(_tokenId);
+        return _spender == owner || getApproved(_tokenId) == _spender || isApprovedForAll(owner, _spender);
+    }
+
+    /**
+     * @dev Internal function to clear current approval of a given token ID
+     * @dev Reverts if the given address is not indeed the owner of the token
+     * @param _owner owner of the token
+     * @param _tokenId uint256 ID of the token to be transferred
+     */
+    function clearApproval(address _owner, uint256 _tokenId) internal {
+        require(ownerOf(_tokenId) == _owner);
+        if (tokenApprovals[_tokenId] != address(0)) {
+            tokenApprovals[_tokenId] = address(0);
+            emit Approval(_owner, address(0), _tokenId);
+        }
+    }
+
+
+    /**
+     * @dev Internal function to invoke `onERC721Received` on a target address
+     * @dev The call is not executed if the target address is not a contract
+     * @param _from address representing the previous owner of the given token ID
+     * @param _to target address that will receive the tokens
+     * @param _tokenId uint256 ID of the token to be transferred
+     * @param _data bytes optional data to send along with the call
+     * @return whether the call correctly returned the expected magic value
+     */
+    function checkAndCallSafeTransfer(
+        address _from,
+        address _to,
+        uint256 _tokenId,
+        bytes _data
+    )
+        internal
+        returns (bool)
+    {
+        if (!_to.isContract()) {
+            return true;
+        }
+        bytes4 retval = ERC721Receiver(_to).onERC721Received(_from, _tokenId, _data);
+        return (retval == ERC721_RECEIVED);
+    }
+
+}
+
+contract CopyrightedAssetLibrary is ERC721BasicToken, CopyrightedAssetLibInterface, WithExternalERC223, ContractReceiver, Pausable  {
+
+    struct Asset {
+        uint256     createTime;
+        bytes       ipfsHash; // base58 encoded file hash
+    }
+
+    mapping (bytes => address) hashOnwer;
+    mapping (uint256 => uint32) tokenPrice; // if set to 0 it means not for sale
 
     Asset[] allAssets;
-    
+
     function createAsset(address from, bytes hash, uint32 price) public onlyOwner returns (uint32 id) { // 创建Asset
-      require(hash.length > 0);
-      require(hashOnwer[hash] == 0);
-      require(price > 0);
+        require(hash.length > 0);
+        require(hashOnwer[hash] == 0);
 
-      Asset memory asset = Asset({
-        createTime: block.timestamp,
-        ipfsHash: hash
-        });
+        Asset memory asset = Asset({
+            createTime: block.timestamp,
+            ipfsHash: hash
+            });
 
-      uint256 newid = allAssets.push(asset) - 1;
-      require(newid == uint256(uint32(newid)));
+        uint256 newid = allAssets.push(asset) - 1;
+        require(newid == uint256(uint32(newid)));
 
-      _transfer(address(0), from, newid);
+        tokenPrice[newid] = price;
+
+        addTokenTo(from, newid);
     }
 
-    function setPrice(address from, uint tokenId, uint32 price) public onlyOwner returns (bool success) { // 设定价格
-      require(tokenOwners[tokenId] == from);
-      tokenPrice[tokenId] = price;
+    function setPrice(uint256 tokenId, uint32 price) returns (bool success) { // 设定价格
+        require(tokenOwner[tokenId] == msg.sender);
+        tokenPrice[tokenId] = price;
     }
 
-    function getAssetInfo(uint id) public returns (address owner, uint256 createTime, uint32 price) {
-      owner = tokenOwners[id];
-      createTime = allAssets[id].createTime;
-      price = tokenPrice[id];
+
+    function getAssetInfo(uint256 id) public returns (address owner, uint256 createTime, bytes hash, uint32 price) {
+        owner = tokenOwner[id];
+        createTime = allAssets[id].createTime;
+        hash = allAssets[id].ipfsHash;
+        price = tokenPrice[id];
+    }    
+
+    /**
+     * @dev Internal function to add a token ID to the list of a given address
+     * @param _to address representing the new owner of the given token ID
+     * @param _tokenId uint256 ID of the token to be added to the tokens list of the given address
+     */
+    function addTokenTo(address _to, uint256 _tokenId) internal {
+        require(tokenOwner[_tokenId] == address(0));
+        tokenOwner[_tokenId] = _to;
+        ownedTokensCount[_to] = ownedTokensCount[_to].add(1);
+        hashOnwer[allAssets[_tokenId].ipfsHash] = _to;
     }
 
-    function name() public view returns (string _name) {
-      _name = "SAL";
+    /**
+     * @dev Internal function to remove a token ID from the list of a given address
+     * @param _from address representing the previous owner of the given token ID
+     * @param _tokenId uint256 ID of the token to be removed from the tokens list of the given address
+     */
+    function removeTokenFrom(address _from, uint256 _tokenId) internal {
+        require(ownerOf(_tokenId) == _from);
+        ownedTokensCount[_from] = ownedTokensCount[_from].sub(1);
+        tokenOwner[_tokenId] = address(0);
     }
 
-    function symbol() public view returns (string _symbol) {
-      _symbol = "SAL";
-    }
-    
-    function decimals() public view returns (uint8 _decimals) {
-      _decimals = 0;
-    }
+    function buy(uint256 _tokenId) public payable {
+        require(ownerOf(_tokenId) != msg.sender) ;
+        require(tokenPrice[_tokenId] > 0);
+        require(msg.value >= tokenPrice[_tokenId]);
 
-    function totalSupply() public view returns (uint256 _supply) {
-      _supply = 100;
-    }
-    
-    function balanceOf(address who) public view returns (uint) {
-      return ownershipTokenCount[who];
-    }
-    
-    function ownerOf(uint _tokenId) external view returns (address owner) {
-      owner = tokenOwners[_tokenId];
-    } 
+        address originalOwner = tokenOwner[_tokenId];
+        unsafeTransferFrom(tokenOwner[_tokenId], msg.sender, _tokenId);
 
-    function transfer(address to, uint value) public returns (bool ok) {}
-    function transfer(address to, uint value, bytes data) public returns (bool ok) {}
-    function transfer(address to, uint value, bytes data, string custom_fallback) public returns (bool ok) {}
+        originalOwner.transfer(tokenPrice[_tokenId]);
+
+        if (msg.value > tokenPrice[_tokenId]) {
+            msg.sender.transfer(msg.value - tokenPrice[_tokenId]);
+        }
+    }
+        
+    function afterTransfer(uint256 _tokenId) internal {
+        tokenPrice[_tokenId] = 0;
+    }    
 
     function tokenFallback(address _from, uint _value, bytes _data) public {
-      // TKN memory tkn;
-      // tkn.sender = _from;
-      // tkn.value = _value;
-      // tkn.data = _data;
-      // uint32 u = uint32(_data[3]) + (uint32(_data[2]) << 8) + (uint32(_data[1]) << 16) + (uint32(_data[0]) << 24);
-      // tkn.sig = bytes4(u);
-      
-      /* tkn variable is analogue of msg variable of Ether transaction
-      *  tkn.sender is person who initiated this token transaction   (analogue of msg.sender)
-      *  tkn.value the number of tokens that were sent   (analogue of msg.value)
-      *  tkn.data is data of token transaction   (analogue of msg.data)
-      *  tkn.sig is 4 bytes signature of function
-      *  if data of token transaction is a function execution
-      */
-
-
+        // TKN memory tkn;
+        // tkn.sender = _from;
+        // tkn.value = _value;
+        // tkn.data = _data;
+        // uint32 u = uint32(_data[3]) + (uint32(_data[2]) << 8) + (uint32(_data[1]) << 16) + (uint32(_data[0]) << 24);
+        // tkn.sig = bytes4(u);
+        
+        /* tkn variable is analogue of msg variable of Ether transaction
+        *  tkn.sender is person who initiated this token transaction   (analogue of msg.sender)
+        *  tkn.value the number of tokens that were sent   (analogue of msg.value)
+        *  tkn.data is data of token transaction   (analogue of msg.data)
+        *  tkn.sig is 4 bytes signature of function
+        *  if data of token transaction is a function execution
+        */
     }
 }

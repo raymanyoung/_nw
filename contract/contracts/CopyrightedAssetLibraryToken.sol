@@ -1,4 +1,5 @@
-pragma solidity ^0.4.18;
+pragma solidity ^0.4.21;
+import "./SafeMath.sol";
 
  /*
  * Contract that is working with ERC223 tokens
@@ -39,29 +40,6 @@ pragma solidity ^0.4.18;
  * https://github.com/Dexaran/ERC223-token-standard
  */
  
- 
- /* https://github.com/LykkeCity/EthereumApiDotNetCore/blob/master/src/ContractBuilder/contracts/token/SafeMath.sol */
-contract SafeMath {
-    uint256 constant public MAX_UINT256 =
-    0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF;
-
-    function safeAdd(uint256 x, uint256 y) pure internal returns (uint256 z) {
-        if (x > MAX_UINT256 - y) revert();
-        return x + y;
-    }
-
-    function safeSub(uint256 x, uint256 y) pure internal returns (uint256 z) {
-        if (x < y) revert();
-        return x - y;
-    }
-
-    function safeMul(uint256 x, uint256 y) pure internal returns (uint256 z) {
-        if (y == 0) return 0;
-        if (x > MAX_UINT256 / y) revert();
-        return x * y;
-    }
-}
-
 
  /* New ERC223 contract interface */
  
@@ -82,7 +60,9 @@ contract ERC223 {
 }
 
  
-contract CopyrightedAssetLibraryToken is ERC223, SafeMath {
+contract CopyrightedAssetLibraryToken is ERC223 {
+
+  using SafeMath for uint256;
 
   mapping(address => uint) balances;
   
@@ -100,7 +80,7 @@ contract CopyrightedAssetLibraryToken is ERC223, SafeMath {
       decimals = 18;
       totalSupply = 7500000000 * 10**uint(decimals);
       balances[msg.sender] = totalSupply;
-      Transfer(address(0), msg.sender, totalSupply, "");
+      emit Transfer(address(0), msg.sender, totalSupply, "");
   }
   
   
@@ -127,10 +107,10 @@ contract CopyrightedAssetLibraryToken is ERC223, SafeMath {
       
     if(isContract(_to)) {
         if (balanceOf(msg.sender) < _value) revert();
-        balances[msg.sender] = safeSub(balanceOf(msg.sender), _value);
-        balances[_to] = safeAdd(balanceOf(_to), _value);
+        balances[msg.sender] = balanceOf(msg.sender).sub(_value);
+        balances[_to] = balanceOf(_to).add(_value);
         require(_to.call.value(0)(bytes4(keccak256(_custom_fallback)), msg.sender, _value, _data));
-        Transfer(msg.sender, _to, _value, _data);
+        emit Transfer(msg.sender, _to, _value, _data);
         return true;
     }
     else {
@@ -177,20 +157,20 @@ contract CopyrightedAssetLibraryToken is ERC223, SafeMath {
   //function that is called when transaction target is an address
   function transferToAddress(address _to, uint _value, bytes _data) private returns (bool success) {
     if (balanceOf(msg.sender) < _value) revert();
-    balances[msg.sender] = safeSub(balanceOf(msg.sender), _value);
-    balances[_to] = safeAdd(balanceOf(_to), _value);
-    Transfer(msg.sender, _to, _value, _data);
+    balances[msg.sender] = balanceOf(msg.sender).sub(_value);
+    balances[_to] = balanceOf(_to).add(_value);
+    emit Transfer(msg.sender, _to, _value, _data);
     return true;
   }
   
   //function that is called when transaction target is a contract
   function transferToContract(address _to, uint _value, bytes _data) private returns (bool success) {
     if (balanceOf(msg.sender) < _value) revert();
-    balances[msg.sender] = safeSub(balanceOf(msg.sender), _value);
-    balances[_to] = safeAdd(balanceOf(_to), _value);
+    balances[msg.sender] = balanceOf(msg.sender).sub(_value);
+    balances[_to] = balanceOf(_to).add(_value);
     ContractReceiver receiver = ContractReceiver(_to);
     receiver.tokenFallback(msg.sender, _value, _data);
-    Transfer(msg.sender, _to, _value, _data);
+    emit Transfer(msg.sender, _to, _value, _data);
     return true;
   }
 
