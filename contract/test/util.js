@@ -4,6 +4,10 @@ var Promise = require("bluebird");
 module.exports = {
     assertEvent: function(contract, filter, callback) {
         return new Promise((resolve, reject) => {
+            if (contract[filter.event] == undefined) {
+                console.log("event " + filter.event + " not found");
+                return;
+            }
             var event = contract[filter.event]();
             event.watch();
             event.get((error, logs) => {

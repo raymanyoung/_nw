@@ -77,6 +77,7 @@ contract ERC721BasicInterface {
 
 contract ContractReceiver {
     function tokenFallback(address _from, uint _value, bytes _data) ;
+    function doTransfer(address _to, uint256 _index) public returns (uint256 price, address owner);
 }
 
 contract CopyrightedAssetLibInterface {
@@ -290,7 +291,8 @@ contract ERC721BasicToken is ERC721BasicInterface {
         clearApproval(_from, _tokenId);
         removeTokenFrom(_from, _tokenId);
         addTokenTo(_to, _tokenId);
-
+        afterTransfer(_tokenId);
+        
         emit Transfer(_from, _to, _tokenId);       
     }
 
@@ -405,11 +407,17 @@ contract CopyrightedAssetLibrary is ERC721BasicToken, CopyrightedAssetLibInterfa
     }
 
     mapping (bytes => address) hashOnwer;
-    mapping (uint256 => uint32) tokenPrice; // if set to 0 it means not for sale
+    mapping (uint256 => uint256) tokenPrice; // if set to 0 it means not for sale
+
+    address _supportedToken;
 
     Asset[] allAssets;
 
-    function createAsset(address from, bytes hash, uint32 price) public onlyOwner returns (uint32 id) { // 创建Asset
+    event Log(string text);
+    event Log(uint text);
+    event Log(address text);
+
+    function createAsset(address from, bytes hash, uint256 price) public onlyOwner returns (uint32 id) { // 创建Asset
         require(hash.length > 0);
         require(hashOnwer[hash] == 0);
 
@@ -426,13 +434,13 @@ contract CopyrightedAssetLibrary is ERC721BasicToken, CopyrightedAssetLibInterfa
         addTokenTo(from, newid);
     }
 
-    function setPrice(uint256 tokenId, uint32 price) returns (bool success) { // 设定价格
+    function setPrice(uint256 tokenId, uint256 price) returns (bool success) { // 设定价格
         require(tokenOwner[tokenId] == msg.sender);
         tokenPrice[tokenId] = price;
     }
 
 
-    function getAssetInfo(uint256 id) public returns (address owner, uint256 createTime, bytes hash, uint32 price) {
+    function getAssetInfo(uint256 id) public returns (address owner, uint256 createTime, bytes hash, uint256 price) {
         owner = tokenOwner[id];
         createTime = allAssets[id].createTime;
         hash = allAssets[id].ipfsHash;
@@ -476,12 +484,27 @@ contract CopyrightedAssetLibrary is ERC721BasicToken, CopyrightedAssetLibInterfa
             msg.sender.transfer(msg.value - tokenPrice[_tokenId]);
         }
     }
+
+    function setSupportedToken(address contractAdress) {
+        require(contractAdress != address(0));
+        _supportedToken = contractAdress;
+    }
         
     function afterTransfer(uint256 _tokenId) internal {
         tokenPrice[_tokenId] = 0;
     }    
 
+    function doTransfer(address _to, uint256 _index) public returns (uint256 price, address owner) {
+        require(_supportedToken != address(0) && msg.sender == _supportedToken);
+        require(tokenPrice[_index] > 0);
+        price = tokenPrice[_index];
+        owner = tokenOwner[_index];
+        unsafeTransferFrom(tokenOwner[_index], _to, _index);
+    }
+
     function tokenFallback(address _from, uint _value, bytes _data) public {
+
+
         // TKN memory tkn;
         // tkn.sender = _from;
         // tkn.value = _value;
@@ -496,5 +519,53 @@ contract CopyrightedAssetLibrary is ERC721BasicToken, CopyrightedAssetLibInterfa
         *  tkn.sig is 4 bytes signature of function
         *  if data of token transaction is a function execution
         */
+    }
+
+    function bytesToUint(bytes b) constant returns (uint result) {
+        uint i;
+        result = 0;
+        for (i = 0; i < b.length; i++) {
+            uint c = uint(b[i]);
+            if (c >= 48 && c <= 57) {
+                result = result * 10 + (c - 48);
+            }
+        }
+    }
+
+    function addressToString(address x) returns (string) {
+        bytes memory s = new bytes(40);
+        for (uint i = 0; i < 20; i++) {
+            byte b = byte(uint8(uint(x) / (2**(8*(19 - i)))));
+            byte hi = byte(uint8(b) / 16);
+            byte lo = byte(uint8(b) - 16 * uint8(hi));
+            s[2*i] = char(hi);
+            s[2*i+1] = char(lo);            
+        }
+        return string(s);
+    }
+
+    function intToString(uint n) returns (string) {
+        bytes memory bytesString = new bytes(1);
+        byte char = byte(bytes32(n));
+        if (char != 0) {
+            bytesString[0] = char;
+        }
+        return string(bytesString);
+    }
+
+    function bytes32ToString (bytes32 data) returns (string) {
+        bytes memory bytesString = new bytes(32);
+        for (uint j=0; j<32; j++) {
+            byte char = byte(bytes32(uint(data) * 2 ** (8 * j)));
+            if (char != 0) {
+                bytesString[j] = char;
+            }
+        }
+        return string(bytesString);
+    }    
+
+    function char(byte b) returns (byte c) {
+        if (b < 10) return byte(uint8(b) + 0x30);
+        else return byte(uint8(b) + 0x57);
     }
 }

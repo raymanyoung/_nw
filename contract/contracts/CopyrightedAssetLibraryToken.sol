@@ -1,4 +1,4 @@
-pragma solidity ^0.4.21;
+pragma solidity ^0.4.18;
 import "./SafeMath.sol";
 
  /*
@@ -31,6 +31,8 @@ import "./SafeMath.sol";
       *  if data of token transaction is a function execution
       */
     }
+
+    function doTransfer(address _to, uint256 _index) public returns (uint256 price, address owner);
 }
 
 
@@ -52,11 +54,11 @@ contract ERC223 {
   function decimals() public view returns (uint8 _decimals);
   function totalSupply() public view returns (uint256 _supply);
 
-  function transfer(address to, uint value) public returns (bool ok);
+//  function transfer(address to, uint value) public returns (bool ok);
   function transfer(address to, uint value, bytes data) public returns (bool ok);
-  function transfer(address to, uint value, bytes data, string custom_fallback) public returns (bool ok);
+//  function transfer(address to, uint value, bytes data, string custom_fallback) public returns (bool ok);
   
-  event Transfer(address indexed from, address indexed to, uint value, bytes indexed data);
+  event Transfer(address indexed from, address indexed to, uint value, bytes data);
 }
 
  
@@ -103,20 +105,21 @@ contract CopyrightedAssetLibraryToken is ERC223 {
   
   
   // Function that is called when a user or another contract wants to transfer funds .
-  function transfer(address _to, uint _value, bytes _data, string _custom_fallback) public returns (bool success) {
+  // function transfer(address _to, uint _value, bytes _data, string _custom_fallback) public returns (bool success) {
+  //   Log("tranfer param 4");
       
-    if(isContract(_to)) {
-        if (balanceOf(msg.sender) < _value) revert();
-        balances[msg.sender] = balanceOf(msg.sender).sub(_value);
-        balances[_to] = balanceOf(_to).add(_value);
-        require(_to.call.value(0)(bytes4(keccak256(_custom_fallback)), msg.sender, _value, _data));
-        emit Transfer(msg.sender, _to, _value, _data);
-        return true;
-    }
-    else {
-        return transferToAddress(_to, _value, _data);
-    }
-  }
+  //   if(isContract(_to)) {
+  //       if (balanceOf(msg.sender) < _value) revert();
+  //       balances[msg.sender] = balanceOf(msg.sender).sub(_value);
+  //       balances[_to] = balanceOf(_to).add(_value);
+  //       require(_to.call.value(0)(bytes4(keccak256(_custom_fallback)), msg.sender, _value, _data));
+  //       emit Transfer(msg.sender, _to, _value, _data);
+  //       return true;
+  //   }
+  //   else {
+  //       return transferToAddress(_to, _value, _data);
+  //   }
+  // }
   
 
   // Function that is called when a user or another contract wants to transfer funds .
@@ -129,20 +132,25 @@ contract CopyrightedAssetLibraryToken is ERC223 {
     }
   }
   
+  event Log(string text);
+  
   // Standard function transfer similar to ERC20 transfer with no _data .
   // Added due to backwards compatibility reasons .
-  function transfer(address _to, uint _value) public returns (bool success) {
+  // function transfer(address _to, uint _value) public returns (bool success) {
+  //   Log("tranfer param 2");
       
-    //standard function transfer similar to ERC20 transfer with no _data
-    //added due to backwards compatibility reasons
-    bytes memory empty;
-    if(isContract(_to)) {
-        return transferToContract(_to, _value, empty);
-    }
-    else {
-        return transferToAddress(_to, _value, empty);
-    }
-  }
+  //   //standard function transfer similar to ERC20 transfer with no _data
+  //   //added due to backwards compatibility reasons
+  //   bytes memory empty;
+  //   if(isContract(_to)) {
+  //       Log("to contract");
+  //       return transferToContract(_to, _value, empty);
+  //   }
+  //   else {
+  //       Log("to address");
+  //       return transferToAddress(_to, _value, empty);
+  //   }
+  // }
 
   //assemble the given address bytecode. If bytecode exists then the _addr is a contract.
   function isContract(address _addr) private view returns (bool is_contract) {
@@ -165,16 +173,65 @@ contract CopyrightedAssetLibraryToken is ERC223 {
   
   //function that is called when transaction target is a contract
   function transferToContract(address _to, uint _value, bytes _data) private returns (bool success) {
-    if (balanceOf(msg.sender) < _value) revert();
-    balances[msg.sender] = balanceOf(msg.sender).sub(_value);
-    balances[_to] = balanceOf(_to).add(_value);
-    ContractReceiver receiver = ContractReceiver(_to);
-    receiver.tokenFallback(msg.sender, _value, _data);
-    emit Transfer(msg.sender, _to, _value, _data);
-    return true;
+    
+      ContractReceiver receiver = ContractReceiver(_to);
+      var (price, owner) = receiver.doTransfer(msg.sender, bytesToUint(_data));
+
+      if (balanceOf(msg.sender) < price) revert();
+      balances[msg.sender] = balanceOf(msg.sender).sub(price);
+      balances[owner] = balanceOf(owner).add(price);
+      receiver.tokenFallback(msg.sender, price, _data);
+      // emit Log(addressToString(msg.sender));
+      // emit Log(uintToString(balanceOf(0xf17f52151ebef6c7334fad080c5704d77216b732)));
+      // emit Log(uintToString(balanceOf(owner)));
+      return true;
   }
 
   function balanceOf(address _owner) public view returns (uint balance) {
-    return balances[_owner];
+      return balances[_owner];
+  }  
+
+    function addressToString(address x) returns (string) {
+        bytes memory s = new bytes(40);
+        for (uint i = 0; i < 20; i++) {
+            byte b = byte(uint8(uint(x) / (2**(8*(19 - i)))));
+            byte hi = byte(uint8(b) / 16);
+            byte lo = byte(uint8(b) - 16 * uint8(hi));
+            s[2*i] = char(hi);
+            s[2*i+1] = char(lo);            
+        }
+        return string(s);
+    }
+        function char(byte b) returns (byte c) {
+        if (b < 10) return byte(uint8(b) + 0x30);
+        else return byte(uint8(b) + 0x57);
+    }
+
+  function uintToString(uint i) internal pure returns (string){
+      if (i == 0) return "0";
+      uint j = i;
+      uint length;
+      while (j != 0){
+          length++;
+          j /= 10;
+      }
+      bytes memory bstr = new bytes(length);
+      uint k = length - 1;
+      while (i != 0){
+          bstr[k--] = byte(48 + i % 10);
+          i /= 10;
+      }
+      return string(bstr);
   }
+
+      function bytesToUint(bytes b) constant returns (uint result) {
+        uint i;
+        result = 0;
+        for (i = 0; i < b.length; i++) {
+            uint c = uint(b[i]);
+            if (c >= 48 && c <= 57) {
+                result = result * 10 + (c - 48);
+            }
+        }
+    }
 }
