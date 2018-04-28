@@ -17,7 +17,7 @@ contract Ownable {
      * @dev The Ownable constructor sets the original `owner` of the contract to the sender
      * account.
      */
-    function Ownable() {
+    function Ownable() public {
         owner = msg.sender;
     }
 
@@ -35,7 +35,7 @@ contract Ownable {
      * @dev Allows the current owner to transfer control of the contract to a newOwner.
      * @param newOwner The address to transfer ownership to.
      */
-    function transferOwnership(address newOwner) onlyOwner {
+    function transferOwnership(address newOwner) public onlyOwner {
         if (newOwner != address(0)) {
             owner = newOwner;
         }
@@ -70,13 +70,13 @@ contract ERC721BasicInterface {
 //     function symbol() public view returns (string _symbol);
 //     function tokenURI(uint256 _tokenId) public view returns (string);
 
-//     function totalSupply() public view returns (uint256);
+     function totalSupply() public view returns (uint256);
 //     function tokenOfOwnerByIndex(address _owner, uint256 _index) public view returns (uint256 _tokenId);
 //     function tokenByIndex(uint256 _index) public view returns (uint256);
  }
 
 contract ContractReceiver {
-    function tokenFallback(address _from, uint _value, bytes _data) ;
+    function tokenFallback(address _from, uint _value, bytes _data) public ;
     function doTransfer(address _to, uint256 _index) public returns (uint256 price, address owner);
 }
 
@@ -98,7 +98,7 @@ contract CopyrightedAssetLibInterface {
 contract WithExternalERC223 is Ownable {
     address _supportedToken;
 
-    function setERC223Contract(address contractAddress) onlyOwner {
+    function setERC223Contract(address contractAddress) public onlyOwner {
         _supportedToken = contractAddress;
     }
 
@@ -406,10 +406,11 @@ contract CopyrightedAssetLibrary is ERC721BasicToken, CopyrightedAssetLibInterfa
         bytes       ipfsHash; // base58 encoded file hash
     }
 
-    mapping (bytes => address) hashOnwer;
+    mapping (bytes => address) hashOwner;
     mapping (uint256 => uint256) tokenPrice; // if set to 0 it means not for sale
+    mapping (address => uint256[]) ownedAssetIds;
 
-    address _supportedToken;
+    address public _supportedToken;
 
     Asset[] allAssets;
 
@@ -417,9 +418,11 @@ contract CopyrightedAssetLibrary is ERC721BasicToken, CopyrightedAssetLibInterfa
     event Log(uint text);
     event Log(address text);
 
-    function createAsset(address from, bytes hash, uint256 price) public onlyOwner returns (uint32 id) { // 创建Asset
+    event AssetCreated(address from, uint256 id);
+
+    function createAsset(address from, bytes hash, uint256 price) public returns (uint256 id) { // 创建Asset
         require(hash.length > 0);
-        require(hashOnwer[hash] == 0);
+        require(hashOwner[hash] == 0);
 
         Asset memory asset = Asset({
             createTime: block.timestamp,
@@ -432,19 +435,28 @@ contract CopyrightedAssetLibrary is ERC721BasicToken, CopyrightedAssetLibInterfa
         tokenPrice[newid] = price;
 
         addTokenTo(from, newid);
+        emit AssetCreated(from, newid);
     }
 
-    function setPrice(uint256 tokenId, uint256 price) returns (bool success) { // 设定价格
+    function setPrice(uint256 tokenId, uint256 price) public returns (bool success) { // 设定价格
         require(tokenOwner[tokenId] == msg.sender);
         tokenPrice[tokenId] = price;
     }
 
+    function totalSupply() public view returns (uint256) {
+        return allAssets.length;
+    }
 
-    function getAssetInfo(uint256 id) public returns (address owner, uint256 createTime, bytes hash, uint256 price) {
+    function getAssetInfo(uint256 id) public view returns (uint256 tokenId, address owner, uint256 createTime, bytes hash, uint256 price) {
+        tokenId = id;
         owner = tokenOwner[id];
         createTime = allAssets[id].createTime;
         hash = allAssets[id].ipfsHash;
         price = tokenPrice[id];
+    }
+
+    function getOwnedTokens(address _address) public view returns (uint256[] ids) {
+        return ownedAssetIds[_address];
     }    
 
     /**
@@ -456,7 +468,8 @@ contract CopyrightedAssetLibrary is ERC721BasicToken, CopyrightedAssetLibInterfa
         require(tokenOwner[_tokenId] == address(0));
         tokenOwner[_tokenId] = _to;
         ownedTokensCount[_to] = ownedTokensCount[_to].add(1);
-        hashOnwer[allAssets[_tokenId].ipfsHash] = _to;
+        hashOwner[allAssets[_tokenId].ipfsHash] = _to;
+        ownedAssetIds[_to].push(_tokenId); 
     }
 
     /**
@@ -468,6 +481,17 @@ contract CopyrightedAssetLibrary is ERC721BasicToken, CopyrightedAssetLibInterfa
         require(ownerOf(_tokenId) == _from);
         ownedTokensCount[_from] = ownedTokensCount[_from].sub(1);
         tokenOwner[_tokenId] = address(0);
+        removeFromOwnedIds(_from, _tokenId);
+    }
+
+    function removeFromOwnedIds(address _address, uint256 _tokenId) internal {
+        for (uint i = 0; i < ownedAssetIds[_address].length; i++) {
+            if (ownedAssetIds[_address][i] == _tokenId) {
+                ownedAssetIds[_address][i] = ownedAssetIds[_address][ownedAssetIds[_address].length - 1];
+                delete ownedAssetIds[_address][ownedAssetIds[_address].length - 1];
+                ownedAssetIds[_address].length--;
+            }
+        }
     }
 
     function buy(uint256 _tokenId) public payable {
@@ -485,7 +509,7 @@ contract CopyrightedAssetLibrary is ERC721BasicToken, CopyrightedAssetLibInterfa
         }
     }
 
-    function setSupportedToken(address contractAdress) {
+    function setSupportedToken(address contractAdress) public {
         require(contractAdress != address(0));
         _supportedToken = contractAdress;
     }
@@ -521,7 +545,7 @@ contract CopyrightedAssetLibrary is ERC721BasicToken, CopyrightedAssetLibInterfa
         */
     }
 
-    function bytesToUint(bytes b) constant returns (uint result) {
+    function bytesToUint(bytes b) private pure  returns (uint result) {
         uint i;
         result = 0;
         for (i = 0; i < b.length; i++) {
@@ -532,7 +556,7 @@ contract CopyrightedAssetLibrary is ERC721BasicToken, CopyrightedAssetLibInterfa
         }
     }
 
-    function addressToString(address x) returns (string) {
+    function addressToString(address x) private pure returns (string) {
         bytes memory s = new bytes(40);
         for (uint i = 0; i < 20; i++) {
             byte b = byte(uint8(uint(x) / (2**(8*(19 - i)))));
@@ -544,7 +568,7 @@ contract CopyrightedAssetLibrary is ERC721BasicToken, CopyrightedAssetLibInterfa
         return string(s);
     }
 
-    function intToString(uint n) returns (string) {
+    function intToString(uint n) private pure returns (string) {
         bytes memory bytesString = new bytes(1);
         byte char = byte(bytes32(n));
         if (char != 0) {
@@ -553,7 +577,7 @@ contract CopyrightedAssetLibrary is ERC721BasicToken, CopyrightedAssetLibInterfa
         return string(bytesString);
     }
 
-    function bytes32ToString (bytes32 data) returns (string) {
+    function bytes32ToString (bytes32 data) private pure  returns (string) {
         bytes memory bytesString = new bytes(32);
         for (uint j=0; j<32; j++) {
             byte char = byte(bytes32(uint(data) * 2 ** (8 * j)));
@@ -564,7 +588,7 @@ contract CopyrightedAssetLibrary is ERC721BasicToken, CopyrightedAssetLibInterfa
         return string(bytesString);
     }    
 
-    function char(byte b) returns (byte c) {
+    function char(byte b) private pure returns (byte c) {
         if (b < 10) return byte(uint8(b) + 0x30);
         else return byte(uint8(b) + 0x57);
     }

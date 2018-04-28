@@ -6,10 +6,11 @@ var base = 10 ** 18;
 
 function printAsset(info) {
 	console.log("------- asset info ----------");
-	console.log("owner: " + info[0]);	
-	console.log("create time: " + new Date(info[1].toNumber() * 1000));	
-	console.log("hash: " + info[2]);	
-	console.log("price: " + info[3].toNumber());	
+	console.log("id: " + info[0]);	
+	console.log("owner: " + info[1]);	
+	console.log("create time: " + new Date(info[2].toNumber() * 1000));	
+	console.log("hash: " + info[3]);	
+	console.log("price: " + info[4].toNumber());	
 }
 
 function printLog(result) {
@@ -46,6 +47,14 @@ contract('CALT:Test', function(accounts) {
 		console.log("price: " + web3.toWei(0.05));
 		let result = await contract.createAsset(web3.eth.accounts[1], "abcde", web3.toWei(0.05), {from: web3.eth.accounts[0]});
 		printLog(result);	
+
+		let query = await contract.getAssetInfo(0);
+		printLog(query);
+	});
+
+	it ('set supported token', async() => {
+		console.log("setting supported token");
+		await contract.setSupportedToken(token.address);
 	});
 
 	it('buy with ETH', async() => {

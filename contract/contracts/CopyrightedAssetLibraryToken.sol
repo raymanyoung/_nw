@@ -175,7 +175,9 @@ contract CopyrightedAssetLibraryToken is ERC223 {
   function transferToContract(address _to, uint _value, bytes _data) private returns (bool success) {
     
       ContractReceiver receiver = ContractReceiver(_to);
-      var (price, owner) = receiver.doTransfer(msg.sender, bytesToUint(_data));
+      uint256 price;
+      address owner;
+      (price, owner) = receiver.doTransfer(msg.sender, bytesToUint(_data));
 
       if (balanceOf(msg.sender) < price) revert();
       balances[msg.sender] = balanceOf(msg.sender).sub(price);
@@ -191,7 +193,7 @@ contract CopyrightedAssetLibraryToken is ERC223 {
       return balances[_owner];
   }  
 
-    function addressToString(address x) returns (string) {
+    function addressToString(address x) private pure returns (string) {
         bytes memory s = new bytes(40);
         for (uint i = 0; i < 20; i++) {
             byte b = byte(uint8(uint(x) / (2**(8*(19 - i)))));
@@ -202,7 +204,7 @@ contract CopyrightedAssetLibraryToken is ERC223 {
         }
         return string(s);
     }
-        function char(byte b) returns (byte c) {
+        function char(byte b) private pure returns (byte c) {
         if (b < 10) return byte(uint8(b) + 0x30);
         else return byte(uint8(b) + 0x57);
     }
@@ -224,7 +226,7 @@ contract CopyrightedAssetLibraryToken is ERC223 {
       return string(bstr);
   }
 
-      function bytesToUint(bytes b) constant returns (uint result) {
+      function bytesToUint(bytes b) private pure returns (uint result) {
         uint i;
         result = 0;
         for (i = 0; i < b.length; i++) {
