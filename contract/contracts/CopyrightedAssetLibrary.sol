@@ -469,7 +469,7 @@ contract CopyrightedAssetLibrary is ERC721BasicToken, CopyrightedAssetLibInterfa
         tokenOwner[_tokenId] = _to;
         ownedTokensCount[_to] = ownedTokensCount[_to].add(1);
         hashOwner[allAssets[_tokenId].ipfsHash] = _to;
-        ownedAssetIds[_to].push(_tokenId); 
+        ownedAssetIds[_to].push(_tokenId);
     }
 
     /**

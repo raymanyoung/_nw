@@ -1,4 +1,4 @@
-pragma solidity ^0.4.18;
+pragma solidity ^0.4.21;
 import "./SafeMath.sol";
 
  /*
@@ -54,15 +54,16 @@ contract ERC223 {
   function decimals() public view returns (uint8 _decimals);
   function totalSupply() public view returns (uint256 _supply);
 
-//  function transfer(address to, uint value) public returns (bool ok);
+  function transfer(address to, uint value) public returns (bool ok);
   function transfer(address to, uint value, bytes data) public returns (bool ok);
 //  function transfer(address to, uint value, bytes data, string custom_fallback) public returns (bool ok);
   
+  event Transfer(address indexed from, address indexed to, uint tokens);
   event Transfer(address indexed from, address indexed to, uint value, bytes data);
 }
 
  
-contract CopyrightedAssetLibraryToken is ERC223 {
+contract NeoWorldCash is ERC223 {
 
   using SafeMath for uint256;
 
@@ -76,11 +77,11 @@ contract CopyrightedAssetLibraryToken is ERC223 {
   // ------------------------------------------------------------------------
   // Constructor
   // ------------------------------------------------------------------------
-  function CopyrightedAssetLibraryToken() public {
-      symbol = "ABK";
-      name = "AI BANK TOKEN";
+  function NeoWorldCash() public {
+      symbol = "NASH";
+      name = "NEOWORLD CASH";
       decimals = 18;
-      totalSupply = 7500000000 * 10**uint(decimals);
+      totalSupply = 7600000000 * 10**uint(decimals);
       balances[msg.sender] = totalSupply;
       emit Transfer(address(0), msg.sender, totalSupply, "");
   }
@@ -132,25 +133,19 @@ contract CopyrightedAssetLibraryToken is ERC223 {
     }
   }
   
-  event Log(string text);
-  
   // Standard function transfer similar to ERC20 transfer with no _data .
   // Added due to backwards compatibility reasons .
-  // function transfer(address _to, uint _value) public returns (bool success) {
-  //   Log("tranfer param 2");
-      
-  //   //standard function transfer similar to ERC20 transfer with no _data
-  //   //added due to backwards compatibility reasons
-  //   bytes memory empty;
-  //   if(isContract(_to)) {
-  //       Log("to contract");
-  //       return transferToContract(_to, _value, empty);
-  //   }
-  //   else {
-  //       Log("to address");
-  //       return transferToAddress(_to, _value, empty);
-  //   }
-  // }
+  function transfer(address _to, uint _value) public returns (bool success) {
+    //standard function transfer similar to ERC20 transfer with no _data
+    //added due to backwards compatibility reasons
+    bytes memory empty;
+    if(isContract(_to)) {
+        return transferToContract(_to, _value, empty);
+    }
+    else {
+        return transferToAddress(_to, _value, empty);
+    }
+  }
 
   //assemble the given address bytecode. If bytecode exists then the _addr is a contract.
   function isContract(address _addr) private view returns (bool is_contract) {
@@ -167,6 +162,7 @@ contract CopyrightedAssetLibraryToken is ERC223 {
     if (balanceOf(msg.sender) < _value) revert();
     balances[msg.sender] = balanceOf(msg.sender).sub(_value);
     balances[_to] = balanceOf(_to).add(_value);
+    emit Transfer(msg.sender, _to, _value);
     emit Transfer(msg.sender, _to, _value, _data);
     return true;
   }
@@ -183,9 +179,8 @@ contract CopyrightedAssetLibraryToken is ERC223 {
       balances[msg.sender] = balanceOf(msg.sender).sub(price);
       balances[owner] = balanceOf(owner).add(price);
       receiver.tokenFallback(msg.sender, price, _data);
-      // emit Log(addressToString(msg.sender));
-      // emit Log(uintToString(balanceOf(0xf17f52151ebef6c7334fad080c5704d77216b732)));
-      // emit Log(uintToString(balanceOf(owner)));
+      emit Transfer(msg.sender, _to, _value);
+      emit Transfer(msg.sender, _to, _value, _data);
       return true;
   }
 
@@ -193,38 +188,38 @@ contract CopyrightedAssetLibraryToken is ERC223 {
       return balances[_owner];
   }  
 
-    function addressToString(address x) private pure returns (string) {
-        bytes memory s = new bytes(40);
-        for (uint i = 0; i < 20; i++) {
-            byte b = byte(uint8(uint(x) / (2**(8*(19 - i)))));
-            byte hi = byte(uint8(b) / 16);
-            byte lo = byte(uint8(b) - 16 * uint8(hi));
-            s[2*i] = char(hi);
-            s[2*i+1] = char(lo);            
-        }
-        return string(s);
-    }
-        function char(byte b) private pure returns (byte c) {
-        if (b < 10) return byte(uint8(b) + 0x30);
-        else return byte(uint8(b) + 0x57);
-    }
+  //   function addressToString(address x) private pure returns (string) {
+  //       bytes memory s = new bytes(40);
+  //       for (uint i = 0; i < 20; i++) {
+  //           byte b = byte(uint8(uint(x) / (2**(8*(19 - i)))));
+  //           byte hi = byte(uint8(b) / 16);
+  //           byte lo = byte(uint8(b) - 16 * uint8(hi));
+  //           s[2*i] = char(hi);
+  //           s[2*i+1] = char(lo);            
+  //       }
+  //       return string(s);
+  //   }
+  //       function char(byte b) private pure returns (byte c) {
+  //       if (b < 10) return byte(uint8(b) + 0x30);
+  //       else return byte(uint8(b) + 0x57);
+  //   }
 
-  function uintToString(uint i) internal pure returns (string){
-      if (i == 0) return "0";
-      uint j = i;
-      uint length;
-      while (j != 0){
-          length++;
-          j /= 10;
-      }
-      bytes memory bstr = new bytes(length);
-      uint k = length - 1;
-      while (i != 0){
-          bstr[k--] = byte(48 + i % 10);
-          i /= 10;
-      }
-      return string(bstr);
-  }
+  // function uintToString(uint i) internal pure returns (string){
+  //     if (i == 0) return "0";
+  //     uint j = i;
+  //     uint length;
+  //     while (j != 0){
+  //         length++;
+  //         j /= 10;
+  //     }
+  //     bytes memory bstr = new bytes(length);
+  //     uint k = length - 1;
+  //     while (i != 0){
+  //         bstr[k--] = byte(48 + i % 10);
+  //         i /= 10;
+  //     }
+  //     return string(bstr);
+  // }
 
       function bytesToUint(bytes b) private pure returns (uint result) {
         uint i;
