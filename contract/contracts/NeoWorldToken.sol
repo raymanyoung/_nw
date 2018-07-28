@@ -1,4 +1,4 @@
-pragma solidity ^0.4.21;
+pragma solidity 0.4.21;
 import "./SafeMath.sol";
 
 /*
@@ -6,9 +6,7 @@ import "./SafeMath.sol";
 */
  
 contract ContractReceiver {
-	function tokenFallback(address _from, uint _value, bytes _data) public pure {
-	}
-	function doTransfer(address _to, uint256 _index) public returns (uint256 price, address owner);
+	function tokenFallback(address _from, uint _value, bytes _data) public pure;
 }
 
 contract Ownable {
@@ -137,8 +135,8 @@ contract NeoWorldCash is ERC223, Pausable {
 	// Constructor
 	// ------------------------------------------------------------------------
 	function NeoWorldCash() public {
-		symbol = "NASH";
-		name = "NEOWORLD CASH";
+		symbol = "XXXX";
+		name = "XXXX CASH";
 		decimals = 18;
 		totalSupply = 100000000000 * 10**uint(decimals);
 		balances[msg.sender] = totalSupply;
@@ -165,6 +163,7 @@ contract NeoWorldCash is ERC223, Pausable {
 	
 	// Function that is called when a user or another contract wants to transfer funds .
 	function transfer(address _to, uint _value, bytes _data) public whenNotPaused returns (bool) {
+		require(_to != 0x0);
 		if(isContract(_to)) {
 			return transferToContract(_to, _value, _data);
 		}
@@ -178,6 +177,8 @@ contract NeoWorldCash is ERC223, Pausable {
 	function transfer(address _to, uint _value) public whenNotPaused returns (bool) {
 		//standard function transfer similar to ERC20 transfer with no _data
 		//added due to backwards compatibility reasons
+		require(_to != 0x0);
+
 		bytes memory empty;
 		if(isContract(_to)) {
 			return transferToContract(_to, _value, empty);
@@ -206,25 +207,17 @@ contract NeoWorldCash is ERC223, Pausable {
 		return true;
 	}
 	
-	//function that is called when transaction target is a contract
-	function transferToContract(address _to, uint _value, bytes _data) private returns (bool) {
-	
-		ContractReceiver receiver = ContractReceiver(_to);
-		uint256 price;
-		address owner;
-		(price, owner) = receiver.doTransfer(msg.sender, bytesToUint(_data));
-
-		require (balanceOf(msg.sender) >= price);
-		require (_value >= price);
-
-		balances[msg.sender] = balanceOf(msg.sender).sub(price);
-		balances[owner] = balanceOf(owner).add(price);
-		receiver.tokenFallback(msg.sender, price, _data);
-		emit Transfer(msg.sender, owner, price);
-		emit Transfer(msg.sender, owner, price, _data);
-		return true;
+  //function that is called when transaction target is a contract
+  function transferToContract(address _to, uint _value, bytes _data) private returns (bool success) {
+	    balances[msg.sender] = balanceOf(msg.sender).sub(_value);
+	    balances[_to] = balanceOf(_to).add(_value);
+	    ContractReceiver receiver = ContractReceiver(_to);
+	    receiver.tokenFallback(msg.sender, _value, _data);
+	    emit Transfer(msg.sender, _to, _value);
+	    emit Transfer(msg.sender, _to, _value, _data);
+	    return true;
 	}
-
+	
 	function balanceOf(address _owner) public constant returns (uint) {
 		return balances[_owner];
 	}  
@@ -236,18 +229,6 @@ contract NeoWorldCash is ERC223, Pausable {
 		totalSupply = totalSupply.sub(_value);                                // Updates totalSupply
 		emit Burn(msg.sender, _value);
 		return true;
-	}
-
-	function bytesToUint(bytes b) private pure returns (uint result) {
-		require(b.length <= 32);
-		uint i;
-		result = 0;
-		for (i = 0; i < b.length; i++) {
-			uint c = uint(b[i]);
-			if (c >= 48 && c <= 57) {
-				result = result * 10 + (c - 48);
-			}
-		}
 	}
 
 	// ------------------------------------------------------------------------
@@ -264,14 +245,14 @@ contract NeoWorldCash is ERC223, Pausable {
 		return true;
 	}
 
-	function increaseApproval (address _spender, uint _addedValue) 
+	function increaseApproval (address _spender, uint _addedValue) public whenNotPaused
 	    returns (bool success) {
 	    allowed[msg.sender][_spender] = allowed[msg.sender][_spender].add(_addedValue);
 	    emit Approval(msg.sender, _spender, allowed[msg.sender][_spender]);
 	    return true;
 	}
 
-	function decreaseApproval (address _spender, uint _subtractedValue) 
+	function decreaseApproval (address _spender, uint _subtractedValue) public whenNotPaused
 	    returns (bool success) {
 	    uint oldValue = allowed[msg.sender][_spender];
 	    if (_subtractedValue > oldValue) {
