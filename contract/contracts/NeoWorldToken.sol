@@ -222,7 +222,7 @@ contract NeoWorldCash is ERC223, Pausable {
 		return balances[_owner];
 	}  
 
-	function burn(uint256 _value) public returns (bool) {
+	function burn(uint256 _value) public whenNotPaused returns (bool) {
 		require (_value > 0); 
 		require (balanceOf(msg.sender) >= _value);            // Check if the sender has enough
 		balances[msg.sender] = balanceOf(msg.sender).sub(_value);                      // Subtract from the sender
