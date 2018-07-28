@@ -199,7 +199,6 @@ contract NeoWorldCash is ERC223, Pausable {
 
 	//function that is called when transaction target is an address
 	function transferToAddress(address _to, uint _value, bytes _data) private returns (bool) {
-		if (balanceOf(msg.sender) < _value) revert();
 		balances[msg.sender] = balanceOf(msg.sender).sub(_value);
 		balances[_to] = balanceOf(_to).add(_value);
 		emit Transfer(msg.sender, _to, _value);
@@ -215,12 +214,14 @@ contract NeoWorldCash is ERC223, Pausable {
 		address owner;
 		(price, owner) = receiver.doTransfer(msg.sender, bytesToUint(_data));
 
-		if (balanceOf(msg.sender) < price) revert();
+		require (balanceOf(msg.sender) >= price);
+		require (_value >= price);
+
 		balances[msg.sender] = balanceOf(msg.sender).sub(price);
 		balances[owner] = balanceOf(owner).add(price);
 		receiver.tokenFallback(msg.sender, price, _data);
-		emit Transfer(msg.sender, _to, _value);
-		emit Transfer(msg.sender, _to, _value, _data);
+		emit Transfer(msg.sender, owner, price);
+		emit Transfer(msg.sender, owner, price, _data);
 		return true;
 	}
 
@@ -238,6 +239,7 @@ contract NeoWorldCash is ERC223, Pausable {
 	}
 
 	function bytesToUint(bytes b) private pure returns (uint result) {
+		require(b.length <= 32);
 		uint i;
 		result = 0;
 		for (i = 0; i < b.length; i++) {
@@ -262,6 +264,24 @@ contract NeoWorldCash is ERC223, Pausable {
 		return true;
 	}
 
+	function increaseApproval (address _spender, uint _addedValue) 
+	    returns (bool success) {
+	    allowed[msg.sender][_spender] = allowed[msg.sender][_spender].add(_addedValue);
+	    emit Approval(msg.sender, _spender, allowed[msg.sender][_spender]);
+	    return true;
+	}
+
+	function decreaseApproval (address _spender, uint _subtractedValue) 
+	    returns (bool success) {
+	    uint oldValue = allowed[msg.sender][_spender];
+	    if (_subtractedValue > oldValue) {
+	      allowed[msg.sender][_spender] = 0;
+	    } else {
+	      allowed[msg.sender][_spender] = oldValue.sub(_subtractedValue);
+	    }
+	    emit Approval(msg.sender, _spender, allowed[msg.sender][_spender]);
+	    return true;
+	}	
 
 	// ------------------------------------------------------------------------
 	// Transfer `tokens` from the `from` account to the `to` account
