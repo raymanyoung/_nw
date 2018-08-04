@@ -49,7 +49,7 @@ contract ERC223 is ERC20Interface {
 }
 
  
-contract NeoWorldToken is ERC223, Pausable {
+contract NeoWorldCash is ERC223, Pausable {
 
 	using SafeMath for uint256;
 	using ContractLib for address;
@@ -67,7 +67,7 @@ contract NeoWorldToken is ERC223, Pausable {
 	// ------------------------------------------------------------------------
 	// Constructor
 	// ------------------------------------------------------------------------
-	function NeoWorldToken() public {
+	function NeoWorldCash() public {
 		symbol = "NASH";
 		name = "NEOWORLD CASH";
 		decimals = 18;
