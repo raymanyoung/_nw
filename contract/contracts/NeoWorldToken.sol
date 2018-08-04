@@ -354,15 +354,28 @@ contract NeoWorldToken is ERC223, Pausable {
 	mapping(address => uint256) lockedBalanceRemains;
 	mapping(address => uint256) cyclesUnlocked;
 
+	mapping(address => bool) addressAllowToLock;
+
 	event Locked (address _address, uint256 _count, uint256 _starttime, uint256 _unlockPeriodInSeconds, uint256 _unlockNumberOfCycles);
 	event Unlocked (address _address, uint256 _count);
 
+	function allowToLock(address _address) public onlyOwner {
+		require(_address != 0x0);
+		addressAllowToLock[_address] = true;
+	}
+
+	function disallowToLock(address _address) public onlyOwner {
+		require(_address != 0x0);
+		addressAllowToLock[_address] = false;
+	}
+
 	function lock(uint256 _count, uint256 _starttime, uint256 _unlockPeriodInSeconds, uint256 _unlockNumberOfCycles) public returns (bool) {
+		require(addressAllowToLock[msg.sender]);
 		require(lockedStartTime[msg.sender] == 0);
 		require(0 < _unlockNumberOfCycles && _unlockNumberOfCycles <= 10); 
 		require(_unlockPeriodInSeconds > 0); 
 		require(_count > 10000);
-		
+
 	//	require(_starttime + _unlockPeriodInSeconds > block.timestamp);
 
 		balances[msg.sender] = balances[msg.sender].sub(_count);
