@@ -240,6 +240,7 @@ contract NeoWorldCash is ERC223, Pausable {
 	MISC：外部项目无法自行使用本预售功能
 	*/
 	address[] supportedERC20Token;
+	mapping (address => bool) tokenSupported;
 	mapping (address => uint256) prices;
 	mapping (address => uint256) starttime;
 	mapping (address => uint256) endtime;
@@ -275,6 +276,7 @@ contract NeoWorldCash is ERC223, Pausable {
 		}
 
 		supportedERC20Token.push(_address);
+		tokenSupported[_address] = true;
 		prices[_address] = _price;
 		starttime[_address] = _startTime;
 		endtime[_address] = _endTime;
@@ -298,6 +300,7 @@ contract NeoWorldCash is ERC223, Pausable {
 				prices[_address] = 0;
 				starttime[_address] = 0;
 				endtime[_address] = 0;
+				tokenSupported[_address] = false;
 
 				emit RemoveSupportedToken(_address);
 
@@ -308,17 +311,9 @@ contract NeoWorldCash is ERC223, Pausable {
 	}
 
 	modifier canBuy(address _address) { 
-		bool found = false;
-		uint256 length = supportedERC20Token.length;
-		for (uint256 i = 0; i < length; i++) {
-			if (supportedERC20Token[i] == _address) {
-				require(block.timestamp > starttime[_address]);
-				require(block.timestamp < endtime[_address]);
-				found = true;
-				break;
-			}
-		}		
-		require (found); 
+		require(tokenSupported[_address]);
+		require(block.timestamp > starttime[_address]);
+		require(block.timestamp < endtime[_address]);
 		_; 
 	}
 
@@ -411,7 +406,7 @@ contract NeoWorldCash is ERC223, Pausable {
 			cycle = unlockNumberOfCycles[msg.sender];
 		}
 
-		uint256 amount = lockedBalanceTotal[msg.sender] * (cycle.sub(cyclesUnlocked[msg.sender])) / unlockNumberOfCycles[msg.sender] ;
+		uint256 amount = lockedBalanceTotal[msg.sender].mul(cycle - cyclesUnlocked[msg.sender]) / unlockNumberOfCycles[msg.sender] ;
 		lockedBalanceRemains[msg.sender] = lockedBalanceRemains[msg.sender].sub(amount);
 		balances[msg.sender] = balances[msg.sender].add(amount);
 
