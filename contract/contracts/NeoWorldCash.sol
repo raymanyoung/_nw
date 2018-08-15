@@ -229,6 +229,16 @@ contract NeoWorldCash is ERC223, Pausable {
 	}
 
 	/* RO Token 预售 */
+	/*
+	预售的操作流程：
+	1. 发行需要的新的ERC20 Token
+	2. 将此Token的预售份额转入本合约地址
+	3. 设定预售时间和价格
+	4. 用户可以用过 joinPreSale 函数参加预售，卖完，逾期或者主动结束为止
+	5. 管理员把预售的到的Nash转出
+	MISC：因为必须制作预售页面通过MetaMask调用函数所以不存在交易所地址转账的问题。
+	MISC：外部项目无法自行使用本预售功能
+	*/
 	address[] supportedERC20Token;
 	mapping (address => uint256) prices;
 	mapping (address => uint256) starttime;
@@ -314,13 +324,14 @@ contract NeoWorldCash is ERC223, Pausable {
 
 	function joinPreSale(address _tokenAddress, uint256 _tokenCount) public canBuy(_tokenAddress) returns (bool) {
 		require(prices[_tokenAddress] > 0);
-		uint256 total = _tokenCount * prices[_tokenAddress]; // will not overflow here since the price will not be high
+		uint256 total = _tokenCount.mul(prices[_tokenAddress]); // will not overflow here since the price will not be high
 		balances[msg.sender] = balances[msg.sender].sub(total);
 		nashInPool = nashInPool.add(total);
 
+		require(ERC20Interface(_tokenAddress).transfer(msg.sender, _tokenCount));
 		emit Transfer(msg.sender, this, total);
 
-		return ERC20Interface(_tokenAddress).transfer(msg.sender, _tokenCount);
+		return true;
 	}
 
 	function transferNashOut(address _to, uint256 count) public onlyOwner returns(bool) {
@@ -375,8 +386,7 @@ contract NeoWorldCash is ERC223, Pausable {
 		require(0 < _unlockNumberOfCycles && _unlockNumberOfCycles <= 10); 
 		require(_unlockPeriodInSeconds > 0); 
 		require(_count > 10000);
-
-	//	require(_starttime + _unlockPeriodInSeconds > block.timestamp);
+		require(_starttime > 0);
 
 		balances[msg.sender] = balances[msg.sender].sub(_count);
 
@@ -394,25 +404,30 @@ contract NeoWorldCash is ERC223, Pausable {
 
 	function tryUnlock() public returns (bool) {
 		require(lockedBalanceRemains[msg.sender] > 0);
-		uint256 cycle = (block.timestamp - lockedStartTime[msg.sender]) / unlockPeriod[msg.sender];
+		uint256 cycle = (block.timestamp.sub(lockedStartTime[msg.sender])) / unlockPeriod[msg.sender];
 		require(cycle > cyclesUnlocked[msg.sender]);
 
 		if (cycle > unlockNumberOfCycles[msg.sender]) {
 			cycle = unlockNumberOfCycles[msg.sender];
 		}
 
-		uint256 amount = lockedBalanceTotal[msg.sender] * (cycle - cyclesUnlocked[msg.sender]) / unlockNumberOfCycles[msg.sender] ;
+		uint256 amount = lockedBalanceTotal[msg.sender] * (cycle.sub(cyclesUnlocked[msg.sender])) / unlockNumberOfCycles[msg.sender] ;
 		lockedBalanceRemains[msg.sender] = lockedBalanceRemains[msg.sender].sub(amount);
 		balances[msg.sender] = balances[msg.sender].add(amount);
 
 		if (cycle == unlockNumberOfCycles[msg.sender]) {
 			// cleanup
 			lockedBalanceTotal[msg.sender] = 0;
-			lockedBalanceRemains[msg.sender] = 0;
 			lockedStartTime[msg.sender] = 0;
 			unlockPeriod[msg.sender] = 0;
 			unlockNumberOfCycles[msg.sender] = 0;
 			cyclesUnlocked[msg.sender] = 0;
+
+			if (lockedBalanceRemains[msg.sender] > 0) {
+				balances[msg.sender] = balances[msg.sender].add(lockedBalanceRemains[msg.sender]);
+				lockedBalanceRemains[msg.sender] = 0;
+			}
+
 		}
 		else {
 			cyclesUnlocked[msg.sender] = cycle;
