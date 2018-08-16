@@ -32,9 +32,6 @@ contract ApproveAndCallFallBack {
 }
 
 
-
-
-
 // ----------------------------------------------------------------------------
 // ERC20 Token, with the addition of symbol, name and decimals and an
 // initial fixed supply
@@ -56,8 +53,8 @@ contract ROA is ERC20Interface, Pausable {
     // ------------------------------------------------------------------------
     function ROA() public {
         symbol = "ROA";
-        name = "Rare Ore A";
-        decimals = 0;
+        name = "NeoWorld Rare Ore A";
+        decimals = 18;
         _totalSupply = 10000000 * 10**uint(decimals);
         balances[owner] = _totalSupply;
         emit Transfer(address(0), owner, _totalSupply);
@@ -84,7 +81,7 @@ contract ROA is ERC20Interface, Pausable {
     // - Owner's account must have sufficient balance to transfer
     // - 0 value transfers are allowed
     // ------------------------------------------------------------------------
-    function transfer(address to, uint tokens) public returns (bool success) {
+    function transfer(address to, uint tokens) public whenNotPaused returns (bool success) {
         balances[msg.sender] = balances[msg.sender].sub(tokens);
         balances[to] = balances[to].add(tokens);
         emit Transfer(msg.sender, to, tokens);
@@ -100,7 +97,7 @@ contract ROA is ERC20Interface, Pausable {
     // recommends that there are no checks for the approval double-spend attack
     // as this should be implemented in user interfaces 
     // ------------------------------------------------------------------------
-    function approve(address spender, uint tokens) public returns (bool success) {
+    function approve(address spender, uint tokens) public whenNotPaused returns (bool success) {
         allowed[msg.sender][spender] = tokens;
         emit Approval(msg.sender, spender, tokens);
         return true;
@@ -134,7 +131,7 @@ contract ROA is ERC20Interface, Pausable {
     // - Spender must have sufficient allowance to transfer
     // - 0 value transfers are allowed
     // ------------------------------------------------------------------------
-    function transferFrom(address from, address to, uint tokens) public returns (bool success) {
+    function transferFrom(address from, address to, uint tokens) public whenNotPaused returns (bool success) {
         balances[from] = balances[from].sub(tokens);
         allowed[from][msg.sender] = allowed[from][msg.sender].sub(tokens);
         balances[to] = balances[to].add(tokens);
@@ -157,7 +154,7 @@ contract ROA is ERC20Interface, Pausable {
     // from the token owner's account. The `spender` contract function
     // `receiveApproval(...)` is then executed
     // ------------------------------------------------------------------------
-    function approveAndCall(address spender, uint tokens, bytes data) public returns (bool success) {
+    function approveAndCall(address spender, uint tokens, bytes data) public whenNotPaused returns (bool success) {
         allowed[msg.sender][spender] = tokens;
         emit Approval(msg.sender, spender, tokens);
         ApproveAndCallFallBack(spender).receiveApproval(msg.sender, tokens, this, data);
