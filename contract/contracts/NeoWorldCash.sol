@@ -335,6 +335,8 @@ contract NeoWorldCash is ERC223, Pausable {
 		balances[_to] = balances[_to].add(count);
 
 		emit Transfer(this, _to, count);
+
+		return true;
 	}
 
 	function getSupportedTokens() public view returns (address[]) {
@@ -430,6 +432,7 @@ contract NeoWorldCash is ERC223, Pausable {
 
 		emit Unlocked(msg.sender, amount);
 
+		return true;
 	}
 
 	function getLockStatus(address _address) public view returns (
