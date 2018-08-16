@@ -36,7 +36,7 @@ contract ApproveAndCallFallBack {
 // ERC20 Token, with the addition of symbol, name and decimals and an
 // initial fixed supply
 // ----------------------------------------------------------------------------
-contract ROA is ERC20Interface, Pausable {
+contract ROB is ERC20Interface, Pausable {
     using SafeMath for uint;
 
     string public symbol;
@@ -51,7 +51,7 @@ contract ROA is ERC20Interface, Pausable {
     // ------------------------------------------------------------------------
     // Constructor
     // ------------------------------------------------------------------------
-    function ROA() public {
+    function ROB() public {
         symbol = "ROB";
         name = "NeoWorld Rare Ore B";
         decimals = 18;
