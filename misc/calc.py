@@ -4,12 +4,13 @@ def cal(str):
 	index = 7
 	for c in str:
 		i += map(c) * index
-		print(c, '=>', map(c), " x " , index)
+#		print(c, '=>', map(c), " x " , index)
 
 		index += 10
 
-	print('总和: ', i)
-	print('地块ID:' , i % 900)
+	print('HASH:', str)
+	print('转化数字: ', i)
+	print('地块序号:' , i % 90 + 1)
 
 def map(c):
 	index = ord(c)
@@ -25,59 +26,30 @@ def map(c):
 #cal("0123456789")
 #cal("abcdefghijklmnopqrstuvwxyz")
 
-data = ['F4kcHVvX36X6rY1NkmNguWsBHKRBV2sez6xmoYvYd3SF', \
-	'2xmA7ph9CNhU9UBgPCE1Xtg9xfRC7pQixqvz3ALDbXTA', \
-	'CAvehVXgk8T4WVjtjVUkcRXKfLZnFkzZHYTG5vm246fn', \
-	'3Q8AN9SraYpfnne3wJFm13fTwsNuZdGHhp3JaM4Y4ZPo', \
-	'DDdZxNeQvrLmGJn19Vn7sNHaS7CCt1rK6CV4xv2Vga2E', \
-	'DryVvqNd8t8JhsQ6vqfAR5eBT6zXvG5FR82a93murzHS', \
-	'6YAewQJ7gJGTLZHcy242KbTKCmKLS6dAdFsNbcj9f8WL', \
-	'8JiFcQSNJBrkVMQ72oGDfLksha3RovRpdTJYktbgAgmb', \
-	'8D4HdiiY8gvhFCivZ23Np7AyeZsSN6XimMp4DRfnj2S1', \
-	'G1oWRGugsRABwBtvp86dpkxwMxNgjfNaYSwm3UoKNMq2', \
-	'66xeFfmVcpH1rXsKJkWkCovDtcqGCiocoe9nQpi2YJcR', \
-	'DhV3K6xWJvkAT96xS2J5Uaz1oyQ2yFx6vLK5KbFptgDu', \
-	'8cPaQ8X2axiJac2F1s27G3TWxfeAqjnjKYML2uHwb6EN', \
-	'FTm2CZAUYa3pgBtFxb6qDiP12BSjrgNza5FYz9QHz91Q', \
-	'5vfB2QtdMZcnxfRmvnukhfd9BDEucxKuPF9KkYuPtZuE', \
-	'G36LTh8e9gksmXunvVpenjv1zGRMjgbftJE366Utf52w', \
-	'BiFfq4JnotLQ23sqGqkycaRU1oRH5CnCRDjqtzSiKMaD', \
-	'9QUc6KZVQgyHVR7dcTL3AE4zrWoZ1L3196SC7wzhcTqm', \
-	'Hmco97f8RDLpGt8EvocbLzrsfdyeGt9ECdwZZTErzEqH', \
-	'C7A6fwFW6f1EfQwdN9HTiZ5CpvtJe86gkpG9X24sLhRh', \
-	'DuqReScZ3zxVPcDCgMDM25fd7esEmMJ2EfnkMtrEJg8r', \
-	't8NjS53QrckxUo8HYSzHLGFaKJLx2cwjHrjCS3GruMC', \
-	'DKvxkYLi2sGQHzn3eLzZEieaijHFrHsysnJuBvbz13Rj', \
-	'EFwNdLE8EuFSN7RMvTxFP6LHPF9PF98YfPz5cZeNhrmC', \
-	'9vBPDNRU4e1GbbF8t2dMcCd5k5sKPC5R5Qfv6Hvcarra', \
-	'E2bvqQLYbJL7wkwTAcdidJcrfDx1XjJ4HfzYkBbkTq5x', \
-	'9wPxJNed9mZvz7rkZZBCk4XhaCtjD282JTNVMWVkhfxV', \
-	'9WaQ2BkDtjaEhR7TSNyFu5Nww9Q4PkkokWtb4YT9tJ3r', \
-	'BJUPbPH7pWmuD6tXsJM2HXzM1BXq46XEkZYnx55PgYVB', \
-	'DNRU3wiXPNtLQWwYXKtv6TAd2VvHPeXR8dkqZX619uJG', \
-	'G9Ad1MHy6FiShL3RvQvt1C1SLMCSXhNuYiWPMAr5NGoh', \
-	'GY31mNP2yJxDH4MEUxJEKAuFd1fAVvtkjtNcVtcd3P2a', \
-	'FMusQmzvm5JKABDvSFJbkQ5iAUMp1LC8XqeZrtvbSjVR', \
-	'9vq9TX5SJoTfLPomawmEk7FezxmYE13r74w9G5hf7eKb', \
-	'JECeNHHo5Ka9SjpwDNfWWzKSDDZ1FdugD2zrGhwYBW5n', \
-	'5BsozSR912s6R2XaCSN4ETb7DJ4gqfKoZatZFrycS5Nu', \
-	'G92m1f8uSGmsqUHd9vFHo3K6mF3CZ26BhcBfrcuFnTR6', \
-	'33AUaSKTR41q8hFEsePoiAR7uabMnfYGQSdiY6VtWFDZ', \
-	'ExTpLNfqSmPFVzL4foG7mF3SeS9tNZs6qDcDh2kigdqA', \
-	'2kUoXYPBShm3S3w2Mt1CnjamhfcVNDFcjQmQY3a63V8N', \
-	'6MVRxrWPDMjwpQbPUNmbbA4gWP7XX2VLdtxy8knkwvH6', \
-	'14jRDhEQ7XnqA9UUY6qmq7LEEDkvfGKU6GZGHrFuoHRB', \
-	'6cKE4oZYDuva7rBbeef11qAaB2VQ8m76Hq4xy9tmNntM', \
-	'5dYp7f7FidNJvkWqVodPsWCCzdfJo1yLWntHcsqoYJmL', \
-	'ACP3JKT863mCVeQW8yjmog8RjoWVi1QiEPfWbdiwLv9i', \
-	'CAnaU6Pe3XKNzJc4nnCDoTJU5RwndxVysYeUP6zwMMMV', \
-	'3u4bm1XxDQdM2LF315hJXzjMqNmYFeQ2foNeCRVJMckc', \
-	'9YQznX2XPPw8jVmoKs5MY5P8krqaycabV2fo2W187N7f', \
-	'7gfd68hUg9QUHtaSCNNX4jTiGcL5ChMuZaMjVw5ZBH6d', \
-	'Er2vp7mUCif55vgYsrtrUZ4Hn2pGJVgTX23VsJRTvgQM', \
-	'6QRzBEpgtsuzPVfBWBij18zrtWvS6wL1EHWst41hwe9z' \
+data = ['b420f3eb37a9c7ce2e22de7a6a6d6b46205dedfebea86d16f7c30027552249aa', \
+	'995874c1af09ab3add7f2ff313c1ad5e717ed976a1f799acb187a18b9cb11f14', \
+	'abb40faa05a1a9a97a48520078dd1a583d9a899c803c58816cf9ae69eabf4e99', \
+	'd774c0940b3bb4dd37d54a16ed2ee8cff0a0fcc6b93156d90560b24a97bf3bd8', \
+	'1ba8e784284cf3633a1729c32177872442149401e305e3f43b72f7a72915d7e3', \
+	'ea056d1b260b58fd586434f35498c8a1853691e67fb839efb060d6bc8d43eed0', \
+	'3647a4a855819bb1ba11e7da6c7079a1e2f6ad9333300cc9b933876a70ba7c4a', \
+	'321b2f8c59372ff55c96ee4f668579c8f02fc9c011ef16d59e74124352c7efe3', \
+	'f6bd6b98c5922ee92ced5a2add53c23409739f135f9dacaf7566ccf28fa95eac', \
+	'27fc01ccf6874c9e4ce00a9ced73ce9b3d8b09c523b53476c169005e71119bd1', \
+	'de00345a3cfd88c0ba1ea3e19b2c27025e58047ccb2564c0857e0f160de33d8a', \
+	'0a1a5fbf5647cb476a1072ae5e0bea918309ee344738a323d7595cec1e2e6789', \
+	'0c765a244c50529f532e3d519add63501fdd798473d6df284da9fc14b7b6edde', \
+	'82863577e455f39ad9a83c04354be4a4d0652626b08f63565b3ba65320e119a4', \
+	'4676f7720084c5b14f9b3a98414bf9a38e1c7837107f8fcc093bd9756aa24f31', \
+	'bb0fe91528781d92c969c89dc856a2cee4723851b2e85e51cfb949377e8dc4b3', \
+	'03321f758028e031e5a41f1bcd5c0576c053c647a578e15db0fda56ba7eb4ea1', \
+	'2ef68fcc98f31f2237ef7bc0167ad76656c22492c2308d99f4f472f315805856', \
+	'83e134dc09cd1e11cf9a5b6b39432a322dfed8eda81fb46364aab6d0060e9352', \
+	'4b3087a9dd497ecd44c786ea38938d686a643f556f78b57c3dfb329c3f8883fa', \
+	'5e4b887a2ecb937517664420235c669cab5e2b7a4e2d650de4414bec3d9700d0', \
+
 ]
 
-# for hash1 in data:
-# 	cal(hash1)
-cal('5emNhWbvQiKZk22VoeJLL2ehsCBkx5iZLAGHvuqNEyBw')
+for hash1 in data:
+ 	cal(hash1)
+#cal('5cCrnLhtLjFB8t3Ntm5J5ifq3op76QSNTo11T4mz6KFU')
