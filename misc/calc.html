@@ -129,10 +129,6 @@
 
     function getLand() {
         var h = $('#hash').val();
-        if (h.startsWith('0x')) {
-            alert('请去除开头的0x');
-            return;
-        }
         var result = calc(h);
         var input = $('#output').val();
         $('#output').val(input + result + "\n");
@@ -183,7 +179,7 @@
 	<body>
 		<script type="text/javascript" src="https://ajax.aspnetcdn.com/ajax/jQuery/jquery-3.3.1.min.js"></script>
         <p>
-    		<label>HASH: 0x</label>
+    		<label>HASH: </label>
     		<input type="text" id="hash">
             <input type="button" onclick="getLand()" value="计算地块">
         </p>
